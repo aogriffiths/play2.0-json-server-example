@@ -22,8 +22,8 @@ window.ThingCollection = Backbone.Collection.extend({
 // Views
 
 /*
- * A Backbone.View for a ThingCollection, renders Things Resources as a list i.e.
- * in a 'ul' tag.
+ * A Backbone.View for a ThingCollection, renders Things Resources as a list
+ * i.e. in a 'ul' tag.
  */
 
 window.ThingListView = Backbone.View.extend({
@@ -119,13 +119,14 @@ window.ThingListItemView = Backbone.View.extend({
     },
     
     render:function (eventName) {
-      $(this.el).html(this.template(this.model.toJSON()));
+      $(this.el).html(this.template(this.model.toJSON()));      
+      app.linkvieweventtoroute(this, "click", ".fed", "doedit", "id");   
+      this.delegateEvents();  
       return this;
     },
     
     events: {
       "click    .qed"       : "doquickedit",
-      "click    .fed"       : "dofulledit",
       "click    .del"       : "dodelete",
       "click    .sav"       : "dosave",
       "click    .cls"       : "doclose"
@@ -133,17 +134,17 @@ window.ThingListItemView = Backbone.View.extend({
     
     doquickedit: function(){
       this.$el.addClass("editing"); 
-      return false; //don't follow the href link
+      return false; // don't follow the href link
     },
 
     dofulledit: function(){
       app.doedit(this.model.id);
-      return false; //don't follow the href link
+      return false; // don't follow the href link
     },
 
     dodelete: function(){
       this.model.destroy();     
-      return false; //don't follow the href link
+      return false; // don't follow the href link
     },
     
     dosave: function(){
@@ -155,19 +156,19 @@ window.ThingListItemView = Backbone.View.extend({
       newmodel.name = getval(".input_name");
       this.model.save(newmodel);
       this.$el.removeClass("editing");    
-      return false; //don't follow the href link
+      return false; // don't follow the href link
     },
     
     doclose: function(){
-      this.render(); //clean the view
+      this.render(); // clean the view
       this.$el.removeClass("editing");
-      return false; //don't follow the href link
+      return false; // don't follow the href link
     }
 });
 
 
 /*
- * A Backbone.View for editing a Thing item, 
+ * A Backbone.View for editing a Thing item,
  */
 
 window.ThingEditItemView = Backbone.View.extend({
@@ -190,7 +191,8 @@ window.ThingEditItemView = Backbone.View.extend({
 
     events: {
       "click    .sav"       : "dosave",
-      "click    .cls"       : "doclose"
+      "click    .cls"       : "doclose",
+      "click    .chr"       : "doclose"
     },    
     
     dosave: function(){
@@ -204,12 +206,12 @@ window.ThingEditItemView = Backbone.View.extend({
       newmodel.content = getval(".textarea_content");
       this.model.save(newmodel);
       app.dolist();
-      return false; //don't follow the href link
+      return false; // don't follow the href link
     },
     
     doclose: function(){
       app.dolist();
-      return false; //don't follow the href link
+      return false; // don't follow the href link
     }
 });
 
@@ -218,27 +220,85 @@ window.ThingEditItemView = Backbone.View.extend({
 var AppRouter = Backbone.Router.extend({
  
     routes:{
-        ""          : "dolist",
-        "!edit/:id" : "doedit"
-      },
+      ""          : "dolist",
+      "!edit/:id" : "doedit"
+    },
     
     initialize:function () {
-        this.thingCollection = new ThingCollection();
-        this.thingCollection.fetch();
+      this.thingCollection = new ThingCollection();
+      /* Fetch a base set of Things to get started with
+       * this is asynchronous so the route callbacks (dolist / doedit)
+       * are likely to get called before the fetch returns a list of 
+       * models. dolist will render empty and the re-render on the 
+       * reset event. doedit handels this scenario with the "m === null"
+       * check.
+       */
+
+      this.thingCollection.fetch();
+      
+      /*
+       * this.thingCollection.fetch({ success:function () { x; } });
+       */
     },
     
     dolist:function () {
-        this.thingListView = new ThingListView({model:this.thingCollection});
-        $('#main').html(this.thingListView.render().el);
-        app.navigate('', false);
+      this.thingListView = new ThingListView({model:this.thingCollection});
+      $('#main').html(this.thingListView.render().el);
+      app.navigate('', false);
     },
-    doedit:function (id) {
-        var m = this.thingCollection.get(id);
-        this.thingEditItemView = new ThingEditItemView({model:m});
-        $('#main').html(this.thingEditItemView.render().el);
-        app.navigate('!edit/' + id, false);
-    }
 
+    doedit:function (id) {
+      var m = this.thingCollection.get(id);
+      /* m will be null if the thingCollection, for any reason, does not
+       * contain the model with this id. This could happen if the
+       * thingCollection.fetch() from the initialize has not returned yet.
+       * Handle these scenarios with a direct request for a single Thing.
+       */
+      var thisapp = this;
+      if(!m){
+        m = new ThingModel({id:id});
+        m.fetch({
+          success:function () {
+            thisapp.doedit_ofmodel(m);
+          },
+          error:function(){
+            //TODO
+            true;
+          }
+        });
+      }else{
+        thisapp.doedit_ofmodel(m);
+      }
+    },
+  
+    doedit_ofmodel:function (m) {
+      this.thingEditItemView = new ThingEditItemView({model:m});
+      $('#main').html(this.thingEditItemView.render().el);
+      app.navigate('!edit/' + m.id  , false);
+    },
+    
+    // e.g. app.routeclick(this, "click", ".link", "do", "id");
+    linkvieweventtoroute: function(view, event, selector, callback, param){
+      var events = {};
+      var parent_app = this;
+      var value = view.model.get(param);
+      var routefunction = function(){
+        parent_app[callback](value);
+        return false;
+      }
+      events[event + ' ' + selector] = routefunction;
+      view.delegateEvents(events);   
+      var key = null;
+      for(key in this.routes){
+        if(this.routes[key]==callback){
+          break;
+        }
+      }
+      if(key !== null){
+        var href = key.replace(':' + param, value);
+        view.$el.find(selector).attr("href", "#" + href);
+      }           
+    }
  
 });
  

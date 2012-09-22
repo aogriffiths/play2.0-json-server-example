@@ -15,6 +15,7 @@ import play.*;
 import play.mvc.*;
 
 import views.html.*;
+import views.html.defaultpages.error;
 
 public class Application extends Controller {
   private static ObjectMapper mapper = new ObjectMapper();
@@ -46,7 +47,13 @@ public class Application extends Controller {
    * Returns a full copy of a single Thing.
    */
   public static Result readOne(Long id) {
-    return TODO;
+    Thing thing = Thing.find.byId(id);
+    if(thing == null){
+      return notFound("No such Thing with id " +  id);
+    }else{
+    JsonNode json = mapper.valueToTree(thing);
+      return ok(json);
+    }
   }
 
   /*
