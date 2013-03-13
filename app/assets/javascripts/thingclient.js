@@ -192,7 +192,7 @@ window.ThingEditItemView = Backbone.View.extend({
     events: {
       "click    .sav"       : "dosave",
       "click    .cls"       : "doclose",
-      "click    .chr"       : "doclose"
+      "click    .chr"       : "docreatechars"
     },    
     
     dosave: function(){
@@ -212,8 +212,39 @@ window.ThingEditItemView = Backbone.View.extend({
     doclose: function(){
       app.dolist();
       return false; // don't follow the href link
+    },
+    
+    docreatechars: function(){
+      /*
+       *Special characters are escaped with \
+       */
+      
+      var str = "UNICODE_START:";      
+      for(var i = 32; i <688; i++){ //A decent chunk of interesting characters
+        str += String.fromCharCode(i);
+      }
+      str += "UNICODE_END"
+      
+      var a="\" \\ \/ \b \f \n \r \t";
+      var b="\"\\\" \\\\ \/ \\b \\f \\n \\r \\t\"";
+      var c=JSON.stringify(a);
+      c==b;
+      
+      var ctrl = "CTRL_START:" + a + "CTRL_END";
+          
+      this.$el.find(".textarea_content").val(ctrl + str); 
+      var json = JSON.stringify(str);
+      var diff = 0
+      for(var i=0; i < str.length ; i++){
+        //danger
+        while(str.charAt(i) !=  json.charAt(i+diff)){
+          console.info(json.charAt(i+diff) + json.charAt(i+diff+1));
+          diff ++;
+        }
+      }
     }
-});
+    
+ });
 
 
 // Router

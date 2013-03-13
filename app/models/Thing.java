@@ -2,6 +2,7 @@ package models;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 
 import play.data.validation.Constraints.Required;
 import play.db.ebean.Model;
@@ -17,8 +18,11 @@ public class Thing extends Model {
 
   public String contenttype;
   
+  @Lob
   public String content;
 
+  @Lob
+  public String cachedJson;
   
   public static Finder<Long, Thing> find = new Finder<Long, Thing>(Long.class,
       Thing.class);

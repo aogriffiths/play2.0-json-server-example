@@ -7,7 +7,8 @@ create table thing (
   id                        bigint not null,
   name                      varchar(255),
   contenttype               varchar(255),
-  content                   varchar(255),
+  content                   clob,
+  cached_json               clob,
   constraint pk_thing primary key (id))
 ;
 

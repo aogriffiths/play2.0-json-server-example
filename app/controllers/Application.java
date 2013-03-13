@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
@@ -46,13 +47,15 @@ public class Application extends Controller {
   /*
    * Returns a full copy of a single Thing.
    */
-  public static Result readOne(Long id) {
+  public static Result readOne(Long id) throws JsonProcessingException, IOException {
     Thing thing = Thing.find.byId(id);
     if(thing == null){
       return notFound("No such Thing with id " +  id);
     }else{
-    JsonNode json = mapper.valueToTree(thing);
-      return ok(json);
+      JsonNode json1 = mapper.readTree(thing.cachedJson);
+      JsonNode json = mapper.valueToTree(thing);
+      
+      return ok(json1);
     }
   }
 
@@ -72,6 +75,9 @@ public class Application extends Controller {
   public static Result update(Long id) throws JsonParseException, JsonMappingException, IOException {
     JsonNode json = request().body().asJson();
     Thing thing = mapper.treeToValue(json, Thing.class);
+    thing.cachedJson = json.toString();
+    Logger.debug("Content: " + thing.content);
+    Logger.debug("Content: " + thing.content);
     thing.update();
     return ok();
   }
